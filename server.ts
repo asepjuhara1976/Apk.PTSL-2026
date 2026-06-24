@@ -73,6 +73,40 @@ async function startServer() {
     res.json({ status: 'ok', timestamp: new Date() });
   });
 
+  // Custom Username and Password Login Route
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      if (!username || !password) {
+        return res.status(400).json({ error: 'Username dan password wajib diisi' });
+      }
+      if (password.length < 4) {
+        return res.status(400).json({ error: 'Password minimal 4 karakter' });
+      }
+
+      const cleanUsername = username.toLowerCase().trim();
+      const uid = 'custom_' + cleanUsername;
+      const email = `${cleanUsername}@ptsl.id`;
+      
+      // Sync user to relational database so assets can belong to this user
+      const dbUser = await getOrCreateUser(uid, email);
+      
+      return res.json({
+        status: 'success',
+        token: uid,
+        user: {
+          uid,
+          email,
+          emailVerified: true,
+          displayName: username,
+        }
+      });
+    } catch (error: any) {
+      console.error('Error in custom login:', error);
+      return res.status(500).json({ error: error.message || 'Gagal login' });
+    }
+  });
+
   // 1. Sync Firebase User to Relational Database
   app.post('/api/auth/sync', requireAuth, async (req: AuthRequest, res) => {
     try {
