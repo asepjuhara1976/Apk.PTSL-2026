@@ -88,7 +88,7 @@ async function startServer() {
       // File: /server.ts
       // =================================================================
       const ACCOUNTS: { [key: string]: string } = {
-        'admin': 'Joe12hara',      // Username: admin, Password: admin123
+        'admin': 'admin123',      // Username: admin, Password: admin123
         'ptsl': 'ptsl2026',        // Username: ptsl, Password: ptsl2026
         'petugas': 'petugas123'    // Username: petugas, Password: petugas123
       };
@@ -108,7 +108,12 @@ async function startServer() {
       const email = `${cleanUsername}@ptsl.id`;
       
       // Sync user to relational database so assets can belong to this user
-      const dbUser = await getOrCreateUser(uid, email);
+      let dbUser = null;
+      try {
+        dbUser = await getOrCreateUser(uid, email);
+      } catch (dbError: any) {
+        console.error('Warning: Database sync failed during custom login, continuing anyway:', dbError);
+      }
       
       return res.json({
         status: 'success',
