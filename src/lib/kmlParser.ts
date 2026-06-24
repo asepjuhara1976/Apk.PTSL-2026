@@ -49,20 +49,43 @@ function parseCoordinatesString(coordStr: string): { lat: number; lng: number }[
     .filter((p): p is { lat: number; lng: number } => p !== null);
 }
 
+// Tolerant XML node fetchers to handle case variations (e.g. coordinates vs Coordinates, Placemark vs placemark)
+function getNodesByTagNameTolerant(element: Element | Document, tagName: string): Element[] {
+  const lowercase = tagName.toLowerCase();
+  const titlecase = tagName.charAt(0).toUpperCase() + tagName.slice(1);
+  const uppercase = tagName.toUpperCase();
+  
+  const res1 = element.getElementsByTagName(lowercase);
+  if (res1 && res1.length > 0) return Array.from(res1);
+  
+  const res2 = element.getElementsByTagName(titlecase);
+  if (res2 && res2.length > 0) return Array.from(res2);
+  
+  const res3 = element.getElementsByTagName(uppercase);
+  if (res3 && res3.length > 0) return Array.from(res3);
+  
+  return [];
+}
+
+function getFirstNodeByTagNameTolerant(element: Element | Document, tagName: string): Element | null {
+  const nodes = getNodesByTagNameTolerant(element, tagName);
+  return nodes.length > 0 ? nodes[0] : null;
+}
+
 export function parseKML(kmlText: string): ParsedKMLAsset[] {
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(kmlText, 'text/xml');
-  const placemarks = xmlDoc.getElementsByTagName('Placemark');
+  const placemarks = getNodesByTagNameTolerant(xmlDoc, 'Placemark');
   const results: ParsedKMLAsset[] = [];
 
   for (let i = 0; i < placemarks.length; i++) {
     const placemark = placemarks[i];
     
     // 1. Extract Name & Description
-    const nameNode = placemark.getElementsByTagName('name')[0];
+    const nameNode = getFirstNodeByTagNameTolerant(placemark, 'name');
     const name = nameNode ? nameNode.textContent || 'Unnamed Placemark' : 'Unnamed Placemark';
     
-    const descNode = placemark.getElementsByTagName('description')[0];
+    const descNode = getFirstNodeByTagNameTolerant(placemark, 'description');
     const description = descNode ? descNode.textContent || '' : '';
 
     // 2. Parse styles
@@ -71,24 +94,24 @@ export function parseKML(kmlText: string): ParsedKMLAsset[] {
     let fillOpacity = 0.3;
     let strokeWidth = 3;
 
-    const styleNode = placemark.getElementsByTagName('Style')[0] || xmlDoc.getElementsByTagName('Style')[0];
+    const styleNode = getFirstNodeByTagNameTolerant(placemark, 'Style') || getFirstNodeByTagNameTolerant(xmlDoc, 'Style');
     if (styleNode) {
-      const lineStyle = styleNode.getElementsByTagName('LineStyle')[0];
+      const lineStyle = getFirstNodeByTagNameTolerant(styleNode, 'LineStyle');
       if (lineStyle) {
-        const colorNode = lineStyle.getElementsByTagName('color')[0];
+        const colorNode = getFirstNodeByTagNameTolerant(lineStyle, 'color');
         if (colorNode) {
           const parsed = parseKmlColor(colorNode.textContent);
           color = parsed.hex;
         }
-        const widthNode = lineStyle.getElementsByTagName('width')[0];
+        const widthNode = getFirstNodeByTagNameTolerant(lineStyle, 'width');
         if (widthNode) {
           strokeWidth = parseFloat(widthNode.textContent || '3');
         }
       }
       
-      const polyStyle = styleNode.getElementsByTagName('PolyStyle')[0];
+      const polyStyle = getFirstNodeByTagNameTolerant(styleNode, 'PolyStyle');
       if (polyStyle) {
-        const colorNode = polyStyle.getElementsByTagName('color')[0];
+        const colorNode = getFirstNodeByTagNameTolerant(polyStyle, 'color');
         if (colorNode) {
           const parsed = parseKmlColor(colorNode.textContent);
           fillColor = parsed.hex;
@@ -105,12 +128,12 @@ export function parseKML(kmlText: string): ParsedKMLAsset[] {
     };
 
     // 3. Extract Geometries
-    const pointNode = placemark.getElementsByTagName('Point')[0];
-    const lineNode = placemark.getElementsByTagName('LineString')[0];
-    const polyNode = placemark.getElementsByTagName('Polygon')[0];
+    const pointNode = getFirstNodeByTagNameTolerant(placemark, 'Point');
+    const lineNode = getFirstNodeByTagNameTolerant(placemark, 'LineString');
+    const polyNode = getFirstNodeByTagNameTolerant(placemark, 'Polygon');
 
     if (pointNode) {
-      const coordNode = pointNode.getElementsByTagName('coordinates')[0];
+      const coordNode = getFirstNodeByTagNameTolerant(pointNode, 'coordinates');
       if (coordNode && coordNode.textContent) {
         const coords = parseCoordinatesString(coordNode.textContent);
         if (coords.length > 0) {
@@ -124,7 +147,7 @@ export function parseKML(kmlText: string): ParsedKMLAsset[] {
         }
       }
     } else if (lineNode) {
-      const coordNode = lineNode.getElementsByTagName('coordinates')[0];
+      const coordNode = getFirstNodeByTagNameTolerant(lineNode, 'coordinates');
       if (coordNode && coordNode.textContent) {
         const coords = parseCoordinatesString(coordNode.textContent);
         if (coords.length >= 2) {
@@ -139,9 +162,9 @@ export function parseKML(kmlText: string): ParsedKMLAsset[] {
       }
     } else if (polyNode) {
       // Look in outerBoundaryIs
-      const outerBoundary = polyNode.getElementsByTagName('outerBoundaryIs')[0];
+      const outerBoundary = getFirstNodeByTagNameTolerant(polyNode, 'outerBoundaryIs');
       if (outerBoundary) {
-        const coordNode = outerBoundary.getElementsByTagName('coordinates')[0];
+        const coordNode = getFirstNodeByTagNameTolerant(outerBoundary, 'coordinates');
         if (coordNode && coordNode.textContent) {
           const coords = parseCoordinatesString(coordNode.textContent);
           if (coords.length >= 3) {
