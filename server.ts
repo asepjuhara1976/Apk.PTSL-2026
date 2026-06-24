@@ -80,11 +80,30 @@ async function startServer() {
       if (!username || !password) {
         return res.status(400).json({ error: 'Username dan password wajib diisi' });
       }
-      if (password.length < 4) {
-        return res.status(400).json({ error: 'Password minimal 4 karakter' });
-      }
 
       const cleanUsername = username.toLowerCase().trim();
+      
+      // =================================================================
+      // KONFIGURASI AKUN LOGIN (UBAH USER & PASSWORD DI SINI)
+      // File: /server.ts
+      // =================================================================
+      const ACCOUNTS: { [key: string]: string } = {
+        'admin': 'Joe12hara',      // Username: admin, Password: admin123
+        'ptsl': 'ptsl2026',        // Username: ptsl, Password: ptsl2026
+        'petugas': 'petugas123'    // Username: petugas, Password: petugas123
+      };
+      // =================================================================
+
+      // Periksa apakah username terdaftar
+      if (!ACCOUNTS[cleanUsername]) {
+        return res.status(401).json({ error: 'Username tidak terdaftar' });
+      }
+
+      // Periksa kecocokan password
+      if (password !== ACCOUNTS[cleanUsername]) {
+        return res.status(401).json({ error: 'Password salah' });
+      }
+
       const uid = 'custom_' + cleanUsername;
       const email = `${cleanUsername}@ptsl.id`;
       
