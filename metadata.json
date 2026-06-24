@@ -1,0 +1,6 @@
+{
+  "name": "GeoData Manager",
+  "description": "Geospatial data visualizer and real-time asset manager with KML parsing, manual geometry editing, and durable PostGIS database persistence.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
